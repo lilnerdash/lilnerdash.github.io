@@ -58,27 +58,6 @@
     .modal-card{background:#fff;max-width:760px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;border:1px solid var(--line)}
     .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
     .modal-body{padding:16px}
-    
-    /* Message box */
-    #messageBox {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: var(--ok);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 999px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-    }
-    #messageBox.show {
-      opacity: 1;
-      visibility: visible;
-    }
 
     /* Interactions */
     .interact{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
@@ -155,17 +134,27 @@
       <div class="modal-body" id="modalBody"></div>
     </div>
   </div>
-  
-  <!-- Message Box -->
-  <div id="messageBox"></div>
 
   <!-- Floating contact button -->
   <a class="float-contact" href="mailto:you@email.com?subject=Website Contact" aria-label="email">
     <span>✉️ Contact Me</span>
   </a>
 
-  <!-- Website Logic -->
+  <!-- Firebase SDKs -->
   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ======= Global Variables from environment =======
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
+
+    let db;
+    let auth;
+    let userId;
+
     // ======= Content Data (You only need to update here) =======
     const DATA = {
       categories: ["Business","Technology","Lifestyle"],
@@ -181,8 +170,7 @@
           content: `
             <p>This is a sample article content. You can paste long articles directly into the <code>content</code> field, or load Markdown converted to HTML.</p>
             <p>Supports <strong>bold</strong>, <em>italic</em>, and links.</p>
-          `,
-          likes: 5,
+          `
         },
         {
           id: "2025-08-12-business-notes",
@@ -192,8 +180,7 @@
           coverImage: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1600&auto=format&fit=crop",
           summary: "How to correct business models and product decisions with each other.",
           isHeadline: true,
-          content: `<p>Sample paragraph for business thinking and product implementation.</p>`,
-          likes: 12,
+          content: `<p>Sample paragraph for business thinking and product implementation.</p>`
         },
         {
           id: "2025-08-14-life-habits",
@@ -203,8 +190,7 @@
           coverImage: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=1600&auto=format&fit=crop",
           summary: "Start with the Minimum Viable Step, and iterate continuously.",
           isHeadline: false,
-          content: `<p>Sample content for a lifestyle article.</p>`,
-          likes: 3,
+          content: `<p>Sample content for a lifestyle article.</p>`
         }
       ],
       polls: [
@@ -213,132 +199,247 @@
           title: "Will AI replace most jobs?",
           description: "Exploring the impact of artificial intelligence on future work.",
           options: [
-            { label: "Yes, most jobs will be replaced", votes: 15 },
-            { label: "No, human creativity is irreplaceable", votes: 20 },
-            { label: "Uncertain, need to wait and see", votes: 8 }
+            { label: "Yes, most jobs will be replaced" },
+            { label: "No, human creativity is irreplaceable" },
+            { label: "Uncertain, need to wait and see" }
           ]
         }
       ]
     }
 
     // ======= Utilities =======
-    const $ = (sel, root=document) => root.querySelector(sel);
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-    const byId = id => document.getElementById(id);
+    const $ = (sel, root=document) => root.querySelector(sel)
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel))
+    const byId = id => document.getElementById(id)
     const storage = {
       get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch{ return fallback } },
       set(key, val){ localStorage.setItem(key, JSON.stringify(val)) }
-    };
-    const YEAR_EL = byId('year'); YEAR_EL.textContent = new Date().getFullYear();
+    }
+    const YEAR_EL = byId('year'); YEAR_EL.textContent = new Date().getFullYear()
 
-    // Message box utility
-    let messageTimeout;
-    function showMessage(msg, type='ok'){
-        const box = byId('messageBox');
-        box.textContent = msg;
-        box.className = 'show';
-        clearTimeout(messageTimeout);
-        messageTimeout = setTimeout(() => {
-            box.classList.remove('show');
-        }, 3000);
+    let likeCounts = {};
+    let userVotes = {};
+    let comments = {};
+
+    // ======= Firebase Initialization =======
+    async function setupFirebase() {
+      try {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // Sign in with custom token or anonymously if not provided
+        if (initialAuthToken) {
+          await signInWithCustomToken(auth, initialAuthToken);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            userId = user.uid;
+            console.log("Firebase initialized. User ID:", userId);
+            // Now that we have a user, we can set up listeners
+            setupFirestoreListeners();
+          } else {
+            console.log("No user signed in.");
+          }
+        });
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+      }
     }
 
-    // ======= Non-persistent state =======
-    let userLikedPosts = storage.get('likedPosts', {});
-    let userVotedPolls = storage.get('votedPolls', {});
-
-    function toggleLike(postId) {
-        userLikedPosts[postId] = !userLikedPosts[postId];
-        storage.set('likedPosts', userLikedPosts);
+    // ======= Firestore Listeners =======
+    function setupFirestoreListeners() {
+      // Listener for likes
+      const likesCollectionRef = collection(db, `artifacts/${appId}/public/data/likes`);
+      onSnapshot(likesCollectionRef, (snapshot) => {
+        snapshot.docs.forEach(doc => {
+          likeCounts[doc.id] = doc.data();
+        });
         renderPosts();
-        if(modal.classList.contains('open')){
-            updateModalInteractions(postId);
+        // Update modal if open
+        if(modal.classList.contains('open')) {
+          const articleId = byId('modalBody').dataset.articleId;
+          updateModalInteractions(articleId);
+          renderComments(articleId);
+        }
+      }, (error) => {
+        console.error("Error listening to likes:", error);
+      });
+      // Listener for polls
+      const pollsCollectionRef = collection(db, `artifacts/${appId}/public/data/polls`);
+      onSnapshot(pollsCollectionRef, (snapshot) => {
+        snapshot.docs.forEach(doc => {
+          const pollData = doc.data();
+          const localPoll = DATA.polls.find(p => p.id === doc.id);
+          if (localPoll) {
+            localPoll.options = pollData.options;
+          }
+        });
+        renderPolls();
+      }, (error) => {
+        console.error("Error listening to polls:", error);
+      });
+      // Listener for comments
+      const commentsCollectionRef = collection(db, `artifacts/${appId}/public/data/comments`);
+      onSnapshot(commentsCollectionRef, (snapshot) => {
+        snapshot.docs.forEach(doc => {
+            const docData = doc.data();
+            comments[doc.id] = docData.list || [];
+        });
+        renderComments(byId('modalBody').dataset.articleId);
+      }, (error) => {
+        console.error("Error listening to comments:", error);
+      });
+    }
+
+    // ======= Firestore Operations =======
+    async function toggleLike(postId) {
+      if (!db || !userId) return console.log("Firebase not ready.");
+
+      const postRef = doc(db, `artifacts/${appId}/public/data/likes`, postId);
+      try {
+        const postSnap = await getDoc(postRef);
+        let likeData = postSnap.exists() ? postSnap.data() : { count: 0, users: [] };
+        const userHasLiked = likeData.users.includes(userId);
+
+        if (userHasLiked) {
+          likeData.count--;
+          likeData.users = likeData.users.filter(id => id !== userId);
+        } else {
+          likeData.count++;
+          likeData.users.push(userId);
+        }
+
+        await setDoc(postRef, likeData, { merge: true });
+        console.log(`Like toggled for post ${postId}`);
+      } catch (e) {
+        console.error("Error toggling like:", e);
+      }
+    }
+
+    async function addComment(postId, text) {
+        if (!db || !userId) return console.log("Firebase not ready.");
+
+        const postRef = doc(db, `artifacts/${appId}/public/data/comments`, postId);
+        try {
+            await setDoc(postRef, {
+                list: arrayUnion({
+                    id: crypto.randomUUID(),
+                    name: `Guest-${userId.slice(0, 4)}`, // Use a short ID for display
+                    text: text,
+                    ts: serverTimestamp()
+                })
+            }, { merge: true });
+        } catch (e) {
+            console.error("Error adding comment:", e);
         }
     }
 
-    function castVote(pollId, optionIndex) {
-        if(userVotedPolls[pollId] !== undefined) {
-            showMessage("You have already voted in this poll!");
+    async function castVote(pollId, optionIndex) {
+        if (!db || !userId) return console.log("Firebase not ready.");
+
+        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/votes`, pollId);
+        const pollDocRef = doc(db, `artifacts/${appId}/public/data/polls`, pollId);
+
+        try {
+          const userVoteSnap = await getDoc(userDocRef);
+          if (userVoteSnap.exists()) {
+            alert("You have already voted in this poll!");
             return;
+          }
+
+          const pollSnap = await getDoc(pollDocRef);
+          let pollData = pollSnap.exists() ? pollSnap.data() : DATA.polls.find(p => p.id === pollId);
+          if (!pollData) {
+            console.error("Poll data not found.");
+            return;
+          }
+
+          if (!pollSnap.exists()) {
+              // Initialize poll data if it doesn't exist
+              pollData.options = pollData.options.map(o => ({...o, votes: 0}));
+          }
+
+          pollData.options[optionIndex].votes += 1;
+
+          await setDoc(pollDocRef, pollData);
+          await setDoc(userDocRef, { option: optionIndex, timestamp: serverTimestamp() });
+          console.log(`Vote cast for poll ${pollId}`);
+        } catch (e) {
+          console.error("Error casting vote:", e);
         }
-
-        userVotedPolls[pollId] = optionIndex;
-        storage.set('votedPolls', userVotedPolls);
-
-        const poll = DATA.polls.find(p => p.id === pollId);
-        poll.options[optionIndex].votes += 1;
-
-        renderPolls();
-        showMessage("Vote cast successfully!");
     }
 
 
     // ======= Headline carousel =======
     function renderHeadlines(){
       const wrap = byId('headline');
-      wrap.innerHTML = '';
-      const heads = DATA.posts.filter(p=>p.isHeadline).slice(0,5);
+      wrap.innerHTML = ''
+      const heads = DATA.posts.filter(p=>p.isHeadline).slice(0,5)
       heads.forEach((p,i)=>{
         const slide = document.createElement('div');
-        slide.className = 'headline-slide'+(i===0?' active':'');
+        slide.className = 'headline-slide'+(i===0?' active':'')
         slide.innerHTML = `
           <img src="${p.coverImage}" alt="${p.title}" />
           <div class="headline-caption">
             <div style="font-weight:700;font-size:18px">${p.title}</div>
             <div class="small">${p.summary}</div>
             <div style="margin-top:8px"><button class="btn primary" data-article="${p.id}">Read Full Article</button></div>
-          </div>`;
-        wrap.appendChild(slide);
-      });
+          </div>`
+        wrap.appendChild(slide)
+      })
       // autoplay
       let i=0; setInterval(()=>{
-        const slides = $$('.headline-slide', wrap);
-        slides.forEach(s=>s.classList.remove('active'));
-        i = (i+1)%slides.length;
-        slides[i].classList.add('active');
-      }, 5000);
+        const slides = $$('.headline-slide', wrap)
+        slides.forEach(s=>s.classList.remove('active'))
+        i = (i+1)%slides.length
+        slides[i].classList.add('active')
+      }, 5000)
 
       wrap.addEventListener('click', e=>{
         if(e.target.matches('[data-article]')){
-          openArticle(e.target.dataset.article);
+          openArticle(e.target.dataset.article)
         }
-      });
+      })
     }
 
     // ======= Tabs & Posts =======
     function renderTabs(){
-      const tabs = byId('tabs'); tabs.innerHTML='';
-      const allCats = ['All', ...DATA.categories];
-      const current = storage.get('tab', 'All');
+      const tabs = byId('tabs'); tabs.innerHTML=''
+      const allCats = ['All', ...DATA.categories]
+      const current = storage.get('tab', 'All')
       allCats.forEach(cat=>{
         const el = document.createElement('button');
-        el.className = 'tab'+(current===cat?' active':'');
-        el.textContent = cat;
-        el.dataset.cat = cat;
-        tabs.appendChild(el);
-      });
+        el.className = 'tab'+(current===cat?' active':'')
+        el.textContent = cat
+        el.dataset.cat = cat
+        tabs.appendChild(el)
+      })
 
       tabs.addEventListener('click', e=>{
         if(e.target.classList.contains('tab')){
-          $$('.tab', tabs).forEach(t=>t.classList.remove('active'));
-          e.target.classList.add('active');
-          storage.set('tab', e.target.dataset.cat);
-          renderPosts();
+          $$('.tab', tabs).forEach(t=>t.classList.remove('active'))
+          e.target.classList.add('active')
+          storage.set('tab', e.target.dataset.cat)
+          renderPosts()
         }
-      });
+      })
     }
 
     function renderPosts(){
-      const cat = storage.get('tab','All');
-      const list = byId('postList'); list.innerHTML='';
-      let posts = [...DATA.posts].sort((a,b)=>new Date(b.date)-new Date(a.date));
-      if(cat!=="All") posts = posts.filter(p=>p.category===cat);
+      const cat = storage.get('tab','All')
+      const list = byId('postList'); list.innerHTML=''
+      let posts = [...DATA.posts].sort((a,b)=>new Date(b.date)-new Date(a.date))
+      if(cat!=="All") posts = posts.filter(p=>p.category===cat)
 
       posts.forEach(p=>{
-        const userHasLiked = userLikedPosts[p.id];
-        const displayLikes = userHasLiked ? p.likes + 1 : p.likes;
+        const likeData = likeCounts[p.id] || { count: 0, users: [] };
+        const userHasLiked = likeData.users.includes(userId);
         const row = document.createElement('div');
-        row.className = 'post';
+        row.className = 'post'
         row.innerHTML = `
           <img class="thumb" src="${p.coverImage}" alt="${p.title}" />
           <div style="flex:1">
@@ -346,49 +447,49 @@
             <div class="meta">${p.date} ・ ${p.category}</div>
             <p class="small">${p.summary}</p>
             <div class="interact">
-              <button class="chip like ${userHasLiked ? 'liked' : ''}" data-like="${p.id}">👍 <span>${displayLikes}</span></button>
+              <button class="chip like ${userHasLiked ? 'liked' : ''}" data-like="${p.id}">👍 <span>${likeData.count}</span></button>
               <button class="chip" data-share="${p.id}">🔗 Share</button>
               <button class="chip" data-open="${p.id}">Read</button>
             </div>
-          </div>`;
-        list.appendChild(row);
-      });
+          </div>`
+        list.appendChild(row)
+      })
 
-      list.addEventListener('click', onPostListClick);
+      list.addEventListener('click', onPostListClick)
     }
 
     function onPostListClick(e){
-      const likeBtn = e.target.closest('[data-like]');
-      const shareBtn = e.target.closest('[data-share]');
-      const openBtn = e.target.closest('[data-open]');
-      if(likeBtn){ toggleLike(likeBtn.dataset.like); }
-      if(shareBtn){ shareArticle(shareBtn.dataset.share); }
-      if(openBtn){ openArticle(openBtn.dataset.open); }
+      const likeBtn = e.target.closest('[data-like]')
+      const shareBtn = e.target.closest('[data-share]')
+      const openBtn = e.target.closest('[data-open]')
+      if(likeBtn){ toggleLike(likeBtn.dataset.like) }
+      if(shareBtn){ shareArticle(shareBtn.dataset.share) }
+      if(openBtn){ openArticle(openBtn.dataset.open) }
     }
 
     // ======= Share =======
     function shareArticle(id){
-      const post = DATA.posts.find(p=>p.id===id);
-      const url = location.origin + location.pathname + `#${id}`;
+      const post = DATA.posts.find(p=>p.id===id)
+      const url = location.origin + location.pathname + `#${id}`
       if(navigator.share){
-        navigator.share({ title: post.title, text: post.summary, url });
+        navigator.share({ title: post.title, text: post.summary, url })
       } else {
-        document.execCommand('copy');
-        showMessage('Link copied to clipboard!');
+        navigator.clipboard.writeText(url)
+        alert('Link copied to clipboard:\n' + url)
       }
     }
 
     // ======= Article Modal (with comments) =======
-    const modal = byId('articleModal');
-    const modalBody = byId('modalBody');
-    byId('closeModal').onclick = ()=> modal.classList.remove('open');
-    modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('open'); });
+    const modal = byId('articleModal')
+    const modalBody = byId('modalBody')
+    byId('closeModal').onclick = ()=> modal.classList.remove('open')
+    modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('open') })
 
     function openArticle(id){
-      const p = DATA.posts.find(x=>x.id===id);
-      if(!p) return;
+      const p = DATA.posts.find(x=>x.id===id)
+      if(!p) return
 
-      byId('modalTitle').textContent = p.title;
+      byId('modalTitle').textContent = p.title
       modalBody.dataset.articleId = id; // Store the current article ID
 
       modalBody.innerHTML = `
@@ -396,44 +497,74 @@
         <div class="meta" style="margin-top:8px">${p.date} ・ ${p.category}</div>
         <div style="margin-top:12px">${p.content}</div>
         <div class="interact" id="modal-interact-${p.id}"></div>
-        <div class="comments">
+        <div class="comments" id="c-${p.id}">
           <h4>Comments</h4>
-          <div class="small" style="color:var(--danger)">Comments are disabled in this static version.</div>
+          <div id="commentList-${p.id}"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="commentInput-${p.id}" placeholder="Leave your thoughts…" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px"/>
+            <button class="btn primary" data-send="${p.id}">Submit</button>
+          </div>
         </div>
-      `;
+      `
       updateModalInteractions(id);
-      modal.classList.add('open');
-      location.hash = id;
+      renderComments(id);
+
+      modal.classList.add('open')
+
+      modalBody.onclick = (e)=>{
+        const likeBtn = e.target.closest('[data-like]')
+        const shareBtn = e.target.closest('[data-share]')
+        const sendBtn = e.target.closest('[data-send]')
+        if(likeBtn){ toggleLike(id); }
+        if(shareBtn){ shareArticle(id) }
+        if(sendBtn){
+          const input = byId(`commentInput-${id}`)
+          const text = input.value.trim()
+          if(text){ addComment(id, text); input.value=''; }
+        }
+      }
+
+      location.hash = id
     }
 
     function updateModalInteractions(id) {
         const p = DATA.posts.find(x => x.id === id);
         if (!p) return;
         const interactEl = byId(`modal-interact-${id}`);
-        const userHasLiked = userLikedPosts[p.id];
-        const displayLikes = userHasLiked ? p.likes + 1 : p.likes;
-
+        const likeData = likeCounts[id] || { count: 0, users: [] };
+        const userHasLiked = likeData.users.includes(userId);
         interactEl.innerHTML = `
-            <button class="chip like ${userHasLiked ? 'liked' : ''}" data-like="${p.id}">👍 <span>${displayLikes}</span></button>
+            <button class="chip like ${userHasLiked ? 'liked' : ''}" data-like="${p.id}">👍 <span>${likeData.count}</span></button>
             <button class="chip" data-share="${p.id}">🔗 Share</button>
         `;
+    }
 
-        interactEl.addEventListener('click', (e) => {
-            const likeBtn = e.target.closest('[data-like]');
-            const shareBtn = e.target.closest('[data-share]');
-            if(likeBtn){ toggleLike(id); }
-            if(shareBtn){ shareArticle(id); }
-        });
+    // ======= Comments =======
+    function renderComments(id){
+      const list = byId(`commentList-${id}`)
+      if(!list) return;
+
+      const postComments = comments[id] || [];
+      const sortedComments = postComments.sort((a,b) => b.ts.seconds - a.ts.seconds);
+
+      list.innerHTML = sortedComments.map(c=>{
+          const date = c.ts ? new Date(c.ts.seconds * 1000).toLocaleString() : 'N/A';
+          const name = escapeHTML(c.name);
+          const text = escapeHTML(c.text);
+          return `<div class="comment"><div class="small">${date}｜${name}</div><div>${text}</div></div>`;
+      }).join('') || `<div class="small">Be the first to leave a comment!</div>`;
+    }
+
+    function escapeHTML(s){
+      return (s || '').replace(/[&<>'"]/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]))
     }
 
     // ======= Polls =======
     function renderPolls(){
-      const box = byId('pollContainer'); box.innerHTML = '';
+      const box = byId('pollContainer'); box.innerHTML = ''
       DATA.polls.forEach(p=>{
         const pollData = p;
         const total = pollData.options.reduce((s,o)=>s+(o.votes || 0), 0);
-        const userVote = userVotedPolls[p.id];
-        const isVoted = userVote !== undefined;
 
         const wrap = document.createElement('div');
         wrap.className = 'card';
@@ -442,9 +573,9 @@
           <div style="font-weight:600">${p.title}</div>
           <div class="small" style="margin:4px 0 8px 0">${p.description}</div>
           <div>${p.options.map((o,idx)=>{
-            const pct = total? Math.round((o.votes || 0)*100/total) : 0;
-            const voted = userVote === idx;
-            const disabled = isVoted;
+            const pct = total? Math.round((o.votes || 0)*100/total) : 0
+            const voted = userVotes[p.id] === idx;
+            const disabled = userVotes[p.id] !== undefined;
 
             return `<div class='poll-option'>
               <input type='radio' name='${p.id}' value='${idx}' ${voted? 'checked':''} ${disabled? 'disabled':''} />
@@ -452,25 +583,26 @@
                 <div class='progress'><div class='bar' style='width:${pct}%' ></div></div>
                 <span class='small'>${total? pct:0}%（${o.votes || 0}）</span>
               </label>
-            </div>`;
+            </div>`
           }).join('')}</div>
           <div style="margin-top:8px;display:flex;gap:8px">
-            <button class="btn primary" data-vote='${p.id}' ${isVoted ? 'disabled':''}>Vote</button>
+            <button class="btn primary" data-vote='${p.id}' ${userVotes[p.id] !== undefined ? 'disabled':''}>Vote</button>
             <span class="small">${total} votes</span>
           </div>
-        `;
-        box.appendChild(wrap);
-      });
+        `
+        box.appendChild(wrap)
+      })
 
       box.addEventListener('click', e=>{
-        const btn = e.target.closest('[data-vote]');
-        if(!btn) return;
-        const pollId = btn.dataset.vote;
-        const checked = box.querySelector(`input[name='${pollId}']:checked`);
-        if(!checked){ showMessage('Please select an option first'); return; }
-        const idx = Number(checked.value);
+        const btn = e.target.closest('[data-vote]')
+        if(!btn) return
+        const pollId = btn.dataset.vote
+        const poll = DATA.polls.find(x=>x.id===pollId)
+        const checked = box.querySelector(`input[name='${pollId}']:checked`)
+        if(!checked){ alert('Please select an option first'); return }
+        const idx = Number(checked.value)
         castVote(pollId, idx);
-      });
+      })
     }
 
     // ======= Init =======
@@ -479,14 +611,16 @@
       renderTabs();
       renderPosts();
       renderPolls();
+      setupFirebase();
       // Open modal if hash points to an article
       if(location.hash){
-        const id = location.hash.replace('#','');
-        if(DATA.posts.some(p=>p.id===id)) openArticle(id);
+        const id = location.hash.replace('#','')
+        if(DATA.posts.some(p=>p.id===id)) openArticle(id)
       }
     }
 
-    init();
+    init()
   </script>
 </body>
 </html>
+
