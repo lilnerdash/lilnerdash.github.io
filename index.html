@@ -55,7 +55,7 @@
     /* Article modal */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px}
     .modal.open{display:flex}
-    .modal-card{background:#fff;max-width:760px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;border:1px solid var(--line)}
+    .modal-card{background:#fff;max-width:1060px;width:100%;max-height:90vh;overflow:auto;border-radius:16px;border:1px solid var(--line)}
     .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
     .modal-body{padding:16px}
     
@@ -98,12 +98,12 @@
 <body>
   <div class="container">
     <header>
-      <div class="brand">Your Name｜Portfolio & Blog</div>
+      <div class="brand">Ashley Liu｜Portfolio & Blog</div>
       <nav class="nav">
         <a href="#resume">Resume</a>
         <a href="#posts">Articles</a>
         <a href="#polls">Polls</a>
-        <a href="https://www.linkedin.com/in/your-linkedin" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://www.linkedin.com/in/ashleytingyuliu/" target="_blank" rel="noopener">LinkedIn</a>
       </nav>
     </header>
 
@@ -124,11 +124,11 @@
         <div class="profile">
           <img class="avatar" src="./avatar.jpg" alt="avatar" onerror="this.src='https://picsum.photos/200'" />
           <div>
-            <div style="font-weight:700">Your Name</div>
-            <div class="small">GTM｜Product Strategy｜Content Creation</div>
+            <div style="font-weight:700">Ashley Liu</div>
+            <div class="small">GTM｜Product Strategy｜B2B Software</div>
             <div style="margin-top:8px">
               <a class="btn" href="https://www.linkedin.com/in/your-linkedin" target="_blank" rel="noopener">LinkedIn</a>
-              <a class="btn" href="./resume.pdf" target="_blank" rel="noopener">Download Resume</a>
+              <a class="btn" href="./resume_ashley_liu.pdf" target="_blank" rel="noopener">Download Resume</a>
             </div>
           </div>
         </div>
@@ -141,7 +141,7 @@
     </div>
 
     <footer>
-      © <span id="year"></span> Your Name. All rights reserved.
+      © <span id="year"></span> Ashley Liu. All rights reserved.
     </footer>
   </div>
 
@@ -160,7 +160,7 @@
   <div id="messageBox"></div>
 
   <!-- Floating contact button -->
-  <a class="float-contact" href="mailto:you@email.com?subject=Website Contact" aria-label="email">
+  <a class="float-contact" href="mailto:a0937084398@gmail.com?subject=Request a talk" aria-label="email">
     <span>✉️ Contact Me</span>
   </a>
 
@@ -168,7 +168,7 @@
   <script type="module">
     // ======= Content Data (You only need to update here) =======
     const DATA = {
-      categories: ["Business","Technology","Lifestyle"],
+      categories: ["Business","Technology","Self-Reflection"],
       posts: [
         {
           id: "2025-08-10-hello-world",
@@ -177,7 +177,7 @@
           category: "Technology",
           coverImage: "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop",
           summary: "A complete consideration from pipeline to performance.",
-          isHeadline: true,
+          isHeadline: false,
           content: `
             <p>This is a sample article content. You can paste long articles directly into the <code>content</code> field, or load Markdown converted to HTML.</p>
             <p>Supports <strong>bold</strong>, <em>italic</em>, and links.</p>
@@ -191,19 +191,122 @@
           category: "Business",
           coverImage: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1600&auto=format&fit=crop",
           summary: "How to correct business models and product decisions with each other.",
-          isHeadline: true,
+          isHeadline: false,
           content: `<p>Sample paragraph for business thinking and product implementation.</p>`,
           likes: 12,
         },
         {
           id: "2025-08-14-life-habits",
-          title: "Habit Formation and Learning Efficiency",
+          title: "The $70B CRM Market is Being Disrupted Right Now",
           date: "2025-08-14",
-          category: "Lifestyle",
+          category: "Technology",
           coverImage: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=1600&auto=format&fit=crop",
-          summary: "Start with the Minimum Viable Step, and iterate continuously.",
-          isHeadline: false,
-          content: `<p>Sample content for a lifestyle article.</p>`,
+          summary: "How AI transforms B2B GTM software",
+          isHeadline: true,
+          content: `<div class="content">
+            <p class="intro-lead">
+
+            <p>
+            While everyone's talking about ChatGPT and AI art, something more fundamental is happening in B2B software. The entire CRM industry is being rebuilt from scratch, and most business leaders haven't noticed yet.</p>
+
+            <p>I've spent 8 years in go-to-market roles, helped scale 200+ startups, and built AI-powered GTM software at Google that generated $2B in opportunities. What I'm seeing now in the CRM space reminds me of the early days of cloud computing. The shift is inevitable, massive, and happening faster than most people realize.</p>
+
+            <p>Here's what I'm seeing and why smart investors should pay attention.</p>
+
+            <h2>The Problem Every Sales Team Knows But Won't Say Out Loud</h2>
+
+            <p><strong>Your CRM is broken.</strong> Not technically broken, but fundamentally flawed for how modern sales actually works.</p>
+
+            <p>I've watched hundreds of sales teams struggle with the same workflow: A hot prospect visits your pricing page at 2 PM on Tuesday. Your sales rep discovers this Friday morning (if they're lucky), spends an hour researching the company, another 30 minutes finding contact info, and finally sends a generic "following up on your website visit" email the following week.</p>
+
+            <p>By then, your competitor who caught the signal in real-time and responded with a personalized message within minutes has already booked the demo.</p>
+
+            <div class="highlight">
+                <p><strong>This isn't a training problem. It's an architecture problem.</strong> Traditional CRMs like Salesforce were built for a world where sales was about managing relationships over months. Today's B2B buyers research, evaluate, and decide in days.</p>
+            </div>
+
+            <p>The math is brutal: Companies using traditional CRMs are losing deals they should win, simply because they're too slow to recognize and act on buying signals.</p>
+
+            <h2>The AI Revolution Isn't Coming. It's Here.</h2>
+
+            <p>Three fundamental changes are reshaping how CRM works:</p>
+
+            <p><strong>Signal Detection</strong>: AI now monitors hundreds of data sources (website behavior, social media activity, funding announcements, job postings, competitor mentions) to identify when prospects are in active buying mode. Instead of cold outreach, you're reaching people who are already looking for solutions.</p>
+
+            <p><strong>Instant Personalization</strong>: AI can research a prospect's company, understand their challenges, and craft personalized messaging in seconds, not hours. We're talking about emails that feel like they were written by someone who's been following the company for months.</p>
+
+            <p><strong>Automated Orchestration</strong>: The entire sequence from signal detection to personalized outreach to follow-up scheduling happens without human intervention. Sales reps focus on having conversations, not hunting for opportunities.</p>
+
+            <p>When I see these capabilities in action, it's clear we're not talking about incremental improvement. This is a complete reimagining of how sales works.</p>
+
+            <h2>The Winners Are Already Emerging</h2>
+
+            <p>Let me show you three companies that are defining the future of CRM:</p>
+
+            <div class="company-section">
+                <h3>Unify: The Signal-Driven Revenue Machine</h3>
+
+                <p>Unify caught my attention because their growth numbers are almost absurd. Founded in 2023, they hit <span class="stat">$5.6M ARR</span> by mid-2025 growing at <span class="stat">17% month-over-month</span>. That's not just good growth. That's "we solved a real problem" growth.</p>
+
+                <p>Their approach is elegantly simple: When someone shows buying intent (pricing page visit, trial signup, competitor research), Unify's AI automatically researches the prospect, crafts personalized outreach, and executes multichannel sequences. No manual work required.</p>
+
+                <p>The results speak for themselves. Customers like Perplexity and Cursor credit Unify with generating hundreds of millions in pipeline. One client added <span class="stat">$1.7M to their pipeline</span> within three months of implementation.</p>
+
+                <p>What makes Unify special isn't just the technology. It's the business model alignment. They charge based on results generated, not seats filled. When customers win, Unify wins.</p>
+            </div>
+
+            <div class="company-section">
+                <h3>Attio: Building the CRM Operating System</h3>
+
+                <p>While Unify focused on solving outbound sales, Attio took a different approach: rebuild CRM infrastructure from scratch for the AI era.</p>
+
+                <p>They've raised <span class="stat">$116M</span> (Google Ventures led their Series B) and serve over <span class="stat">5,000 companies</span> with a fully customizable, programmable CRM. Think of it as CRM Legos powered by AI.</p>
+
+                <p>The platform auto-enriches contact data, eliminates manual entry, and lets users build custom workflows and even embed AI agents directly in the CRM. They're projecting to <span class="stat">quadruple ARR in 2025</span>, which tells me they've found something the market desperately wants.</p>
+
+                <p>Their freemium model ($30-70 per user vs. Salesforce's $150+) is smart positioning. They're not trying to replace Salesforce for Fortune 500 companies. They're capturing the next generation of high-growth companies who want modern tools from day one.</p>
+            </div>
+
+            <div class="company-section">
+                <h3>Amplemarket: The All-in-One Efficiency Play</h3>
+
+                <p>Amplemarket represents a third approach: bundle everything a sales team needs into one AI-powered platform. Lead database, LinkedIn integration, email sequences, deliverability management, and an AI assistant called "Duo" that personalizes every touchpoint.</p>
+
+                <p>Their <span class="stat">$14.9M revenue in 2024</span> with <span class="stat">132% year-over-year growth</span> (achieved with only $12M raised) shows impressive capital efficiency. At $300 per user monthly, they're premium-priced, but customers justify it because the platform generates far more value than it costs.</p>
+
+                <p>What I find most interesting is their bottom-up adoption strategy. They market directly to sales reps, let them experience <span class="stat">3-5x productivity improvements</span>, then those reps advocate internally for company-wide adoption. It's classic product-led growth in the B2B space.</p>
+            </div>
+
+            <h2>Why This Matters Now</h2>
+
+            <p>The CRM market is at an inflection point. <span class="stat">81% of organizations</span> plan to adopt AI-driven CRM systems in the coming years. But here's what most people miss: this isn't about adding AI features to existing CRMs. It's about replacing them entirely with AI-native platforms.</p>
+
+            <p>The companies I'm tracking aren't just growing fast. They're growing efficiently. Unify reached $5.6M ARR with 40 employees. Attio serves 5,000+ companies. Amplemarket generated $14.9M revenue with 100 people. Compare that to traditional CRM implementations that require armies of consultants and months of setup.</p>
+
+            <p>This efficiency advantage compounds. AI-native CRMs don't just work better. They cost less to deploy, require less training, and deliver value faster.</p>
+
+            <h2>The Investment Opportunity</h2>
+
+            <p>From an investment perspective, we're still early. The total addressable market is massive ($70B+ and growing), but most enterprise buyers haven't seriously evaluated AI-native alternatives yet.</p>
+
+            <p>The companies that execute well in the next 18 months will capture disproportionate market share as the broader market catches up. I'm seeing this pattern across multiple verticals: AI-native companies don't just compete with incumbents. They make them obsolete.</p>
+
+            <p>The risk, of course, is that Salesforce, HubSpot, and Microsoft accelerate their AI development and close the gap. But having worked on AI integration at enterprise scale, I know how hard it is to retrofit AI capabilities onto legacy architecture.</p>
+
+            <p>AI-native startups have a structural advantage that's difficult to overcome.</p>
+        </div>
+
+        <div class="cta-section">
+            <h2>What Happens Next</h2>
+
+            <p>I believe we're about to see a rapid market shift. The companies currently using AI CRMs will have such significant competitive advantages (faster response times, higher conversion rates, lower customer acquisition costs) that their competitors will be forced to follow.</p>
+
+            <p>This isn't a gradual transition. When the tipping point hits, adoption will accelerate quickly.</p>
+
+            <p><strong>For business leaders:</strong> If you're not evaluating AI-native CRM alternatives, you're already behind. The question isn't whether to make the switch, but how quickly you can do it without disrupting current operations.</p>
+
+            <p><strong>For investors:</strong> The AI CRM space offers rare combination of massive market size, clear technological disruption, and companies with proven traction. The winners in this space won't just be successful. They'll redefine how business gets done.</p>
+        </div>`,
           likes: 3,
         }
       ],
